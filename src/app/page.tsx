@@ -73,11 +73,14 @@ export default function Home(): JSX.Element {
   }
 
   const fetchPlaylist = async (prompt: string) => {
+    const truncatedPrompt = prompt.length > 100 ? prompt.slice(0, 97) + '...' : prompt
+    console.log('[UI] Sending prompt:', truncatedPrompt)
+
     try {
       const playlistRes = await fetch('/api/playlist/build', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: truncatedPrompt }),
       })
       const data = await playlistRes.json()
       if (data.playlistUrl) {

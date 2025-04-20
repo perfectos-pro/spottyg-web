@@ -17,11 +17,23 @@ export async function POST(req: NextRequest) {
 
     const cookieStore = await cookies()
     const token = cookieStore.get('spotify_access_token')?.value || null
+    console.log('[build route] Access token:', token ? '[REDACTED]' : 'Not found')
     if (!token) {
       return new Response(JSON.stringify({ error: 'Not authenticated with Spotify' }), { status: 401 })
     }
 
-    const user = await getSpotifyProfile(token)
+    let user
+    try {
+      user = await getSpotifyProfile(token)
+      console.log('[build route] Retrieved user profile:', user.display_name || user.id)
+    } catch (err) {
+      console.error('[build route] Failed to fetch user profile:', err)
+      return new Response(JSON.stringify({ error: 'Failed to fetch user profile' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
     const trackList = await getTrackListFromPrompt(prompt)
 
     const playlistName = `SpottyG Playlist - ${prompt.slice(0, 32)}`
