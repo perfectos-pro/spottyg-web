@@ -1,6 +1,7 @@
 export const getSpotifyAccessToken = async (): Promise<string> => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/token`)
     const data = await res.json()
+    if (!data.token) throw new Error('No Spotify access token provided')
     return data.token
 }
 
@@ -112,5 +113,6 @@ export async function getAccessTokenFromCookies(): Promise<string | null> {
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/token`)
   if (!res.ok) return null
   const data = await res.json()
-  return data.token || null
+  if (!data.token) throw new Error('No Spotify access token provided from cookies')
+  return data.token
 }

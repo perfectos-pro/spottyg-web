@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getAccessTokenFromCookies, getSpotifyProfile, createPlaylist, searchSpotifyTracks, addTracksToPlaylist } from '@/lib'
 import { getTrackListFromPrompt } from '@/lib/openai'
+import { cookies } from 'next/headers'
 
 export const runtime = 'nodejs'
 
@@ -12,7 +13,8 @@ export async function POST(req: NextRequest) {
       return new Response(JSON.stringify({ error: 'Missing prompt' }), { status: 400 })
     }
 
-    const token = await getAccessTokenFromCookies()
+    const cookieStore = await cookies()
+    const token = cookieStore.get('spotify_access_token')?.value || null
     if (!token) {
       return new Response(JSON.stringify({ error: 'Not authenticated with Spotify' }), { status: 401 })
     }
