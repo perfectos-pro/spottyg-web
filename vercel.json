@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/playlist/build.ts": {
-      "runtime": "nodejs"
+      "runtime": "nodejs18.x"
     }
   }
 }
