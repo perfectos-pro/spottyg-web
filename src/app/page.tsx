@@ -86,10 +86,13 @@ export default function Home(): JSX.Element {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: updated })
       })
-      console.debug('Raw /api/chat response:', res)
-      const rawText = await res.clone().text()
-      console.debug('Raw text before .json():', rawText)
-
+ 
+      if (!res.ok) {
+        const errorText = await res.text()
+        throw new Error(`API error: ${errorText}`)
+      }
+ 
+      const rawText = await res.text()
       let data
       try {
         data = JSON.parse(rawText)
