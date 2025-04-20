@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import DOMPurify from 'dompurify'
 import { v4 as uuidv4 } from 'uuid'
+import type { JSX } from 'react'
 
 export default function Home(): JSX.Element {
   const [messages, setMessages] = useState([
