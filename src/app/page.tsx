@@ -72,6 +72,34 @@ export default function Home(): JSX.Element {
     window.location.href = '/api/auth/spotify'
   }
 
+  const fetchHistory = async (playlistName: string, tracks: string[], placeholderId: string) => {
+    try {
+      const historyRes = await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playlistName, tracks }),
+      })
+
+      const historyData = await historyRes.json()
+      if (historyData.history) {
+        setMessages(prev => [...prev, {
+          id: uuidv4(),
+          role: 'assistant',
+          content: DOMPurify.sanitize(historyData.history),
+          timestamp: new Date().toISOString(),
+        }])
+      }
+    } catch (err) {
+      console.error('Error fetching history:', err)
+      setMessages(prev => [...prev, {
+        id: uuidv4(),
+        role: 'assistant',
+        content: 'Unable to retrieve annotation at this time. Please try again later.',
+        timestamp: new Date().toISOString(),
+      }])
+    }
+  }
+
   const sendMessage = async () => {
     if (!input.trim()) return
     const timestamp = new Date().toISOString()
@@ -99,47 +127,23 @@ export default function Home(): JSX.Element {
         if (!data.reply) {
           throw new Error('No reply field in response')
         }
-        setMessages([...updated, { id: uuidv4(), role: 'assistant', content: data.reply, timestamp: new Date().toISOString() }])
+        setMessages(prev => [...prev, {
+          id: uuidv4(),
+          role: 'assistant',
+          content: data.reply,
+          timestamp: new Date().toISOString()
+        }])
+
         const placeholderId = uuidv4()
         const randomPhrase = annotationLoadingPhrases[Math.floor(Math.random() * annotationLoadingPhrases.length)]
         setMessages(prev => [...prev, {
           id: placeholderId,
           role: 'assistant',
           content: randomPhrase,
-          timestamp: new Date().toISOString(),
+          timestamp: new Date().toISOString()
         }])
 
-        // Step 2: Fetch historical annotation
-        if (data.tracks && data.tracks.length && data.reply) {
-          try {
-            const historyRes = await fetch('/api/history', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                playlistName: input,
-                tracks: data.tracks,
-              }),
-            })
-
-            const historyData = await historyRes.json()
-            if (historyData.history) {
-              setMessages(prev => [...prev, {
-                id: uuidv4(),
-                role: 'assistant',
-              content: DOMPurify.sanitize(historyData.history),
-                timestamp: new Date().toISOString(),
-              }])
-            }
-            } catch (err) {
-              console.error('Error fetching history:', err)
-              setMessages(prev => [...prev, {
-                id: uuidv4(),
-                role: 'assistant',
-                content: 'Unable to retrieve annotation at this time. Please try again later.',
-                timestamp: new Date().toISOString(),
-              }])
-            }
-        }
+        fetchHistory(input, data.tracks, placeholderId)
       } catch (err) {
         throw new Error('Failed to parse JSON: ' + err)
       }
