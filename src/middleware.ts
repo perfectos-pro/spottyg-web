@@ -32,8 +32,12 @@ export function middleware(request: NextRequest): NextResponse {
 // See "Matching Paths" below to learn more
 export const config = {
   matcher: [
-    // Match all API routes and root
-    '/api/:path*',
-    '/'
+    /*
+     * Apply middleware to all paths except:
+     * - /api routes
+     * - Next.js internals
+     * - static assets
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 }
