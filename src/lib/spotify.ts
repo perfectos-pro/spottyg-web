@@ -96,7 +96,7 @@ export async function createPlaylist(name: string, accessToken: string): Promise
   }
 }
 
-export async function getSpotifyProfile(accessToken: string): Promise<{ id: string }> {
+export async function getSpotifyProfile(accessToken: string): Promise<{ id: string; display_name?: string }> {
   const profileRes = await fetch('https://api.spotify.com/v1/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
   })

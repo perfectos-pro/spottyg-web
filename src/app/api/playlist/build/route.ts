@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       return new Response(JSON.stringify({ error: 'Not authenticated with Spotify' }), { status: 401 })
     }
 
-    let user
+    let user: { id: string; display_name?: string }
     try {
       user = await getSpotifyProfile(token)
       console.log('[build route] Retrieved user profile:', user.display_name || user.id)
