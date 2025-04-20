@@ -120,9 +120,25 @@ export async function getSpotifyProfile(accessToken: string): Promise<{ id: stri
 }
 
 export async function getAccessTokenFromCookies(): Promise<string | null> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/token`)
-  if (!res.ok) return null
-  const data = await res.json()
-  if (!data.token) throw new Error('No Spotify access token provided from cookies')
-  return data.token
+  const cookieResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/token`)
+
+  if (!cookieResponse.ok) {
+    console.warn('[getAccessTokenFromCookies] Failed to fetch token endpoint')
+    return null
+  }
+
+  const data = await cookieResponse.json()
+  console.debug('[getAccessTokenFromCookies] Token response:', data)
+
+  if (data.token) return data.token
+
+  // Attempt to refresh if no token
+  const refreshResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/token?refresh=true`)
+  const refreshData = await refreshResponse.json()
+
+  console.debug('[getAccessTokenFromCookies] Refresh attempt result:', refreshData)
+
+  if (refreshData.token) return refreshData.token
+
+  throw new Error('Unable to retrieve or refresh Spotify access token from cookies.')
 }

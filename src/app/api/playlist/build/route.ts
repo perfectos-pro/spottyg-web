@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { getAccessTokenFromCookies, getSpotifyProfile, createPlaylist, searchSpotifyTracks, addTracksToPlaylist } from '@/lib'
+import { getAccessTokenFromCookies, createPlaylist, searchSpotifyTracks, addTracksToPlaylist } from '@/lib'
 import { getTrackListFromPrompt } from '@/lib/openai'
 import { cookies } from 'next/headers'
 
@@ -16,15 +16,33 @@ export async function POST(req: NextRequest) {
     }
 
     const cookieStore = await cookies()
+    console.log('[build route] All cookies:', cookieStore.getAll().map(c => `${c.name}=${c.value}`).join('; '))
     const token = cookieStore.get('spotify_access_token')?.value || null
-    console.log('[build route] Access token:', token ? '[REDACTED]' : 'Not found')
+    console.log('[build route] Access token present:', !!token)
+    if (token) {
+      console.log('[build route] Access token (prefix):', token.slice(0, 8))
+    }
     if (!token) {
       return new Response(JSON.stringify({ error: 'Not authenticated with Spotify' }), { status: 401 })
     }
 
     let user: { id: string; display_name?: string }
     try {
-      user = await getSpotifyProfile(token)
+      const profileRes = await fetch('https://api.spotify.com/v1/me', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      const debugText = await profileRes.text()
+      console.log('[build route] Spotify profile fetch status:', profileRes.status)
+      console.log('[build route] Spotify profile raw body:', debugText)
+
+      if (!profileRes.ok) {
+        throw new Error(`Failed with status ${profileRes.status}`)
+      }
+
+      user = JSON.parse(debugText)
       console.log('[build route] Retrieved user profile:', user.display_name || user.id)
     } catch (err) {
       console.error('[build route] Failed to fetch user profile:', err)
@@ -37,7 +55,21 @@ export async function POST(req: NextRequest) {
     const trackList = await getTrackListFromPrompt(prompt)
 
     const playlistName = `SpottyG Playlist - ${prompt.slice(0, 32)}`
-    const playlist = await createPlaylist(token, playlistName)
+    let playlist
+    try {
+      playlist = await createPlaylist(token, playlistName)
+      console.log('[build route] Playlist creation succeeded:', {
+        name: playlist.name,
+        url: playlist.url,
+        id: playlist.id
+      })
+    } catch (err) {
+      console.error('[build route] Playlist creation failed:', err)
+      return new Response(JSON.stringify({ error: 'Failed to create playlist' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
 
     const rawUris = await searchSpotifyTracks(token, trackList.join(', '))
     const trackUris: string[] = rawUris.split(',').map((uri: string) => uri.trim())
