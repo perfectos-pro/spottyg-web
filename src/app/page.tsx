@@ -72,6 +72,44 @@ export default function Home(): JSX.Element {
     window.location.href = '/api/auth/spotify'
   }
 
+  const fetchPlaylist = async (prompt: string) => {
+    try {
+      const playlistRes = await fetch('/api/playlist/build', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      })
+      const data = await playlistRes.json()
+      if (data.playlistUrl) {
+        setMessages(prev => [...prev, {
+          id: uuidv4(),
+          role: 'assistant',
+          content: `Here's your playlist: <a href="${data.playlistUrl}" target="_blank" rel="noopener noreferrer">${data.playlistUrl}</a>`,
+          timestamp: new Date().toISOString(),
+        }])
+        const placeholderId = uuidv4()
+        const phrase = annotationLoadingPhrases[Math.floor(Math.random() * annotationLoadingPhrases.length)]
+        setMessages(prev => [...prev, {
+          id: placeholderId,
+          role: 'assistant',
+          content: phrase,
+          timestamp: new Date().toISOString(),
+        }])
+        fetchHistory(prompt, data.tracks, placeholderId)
+      } else {
+        throw new Error(data.error || 'Playlist creation failed')
+      }
+    } catch (err) {
+      console.error('Playlist fetch failed:', err)
+      setMessages(prev => [...prev, {
+        id: uuidv4(),
+        role: 'assistant',
+        content: 'Error: Unable to create playlist.',
+        timestamp: new Date().toISOString()
+      }])
+    }
+  }
+
   const fetchHistory = async (playlistName: string, tracks: string[], placeholderId: string) => {
     try {
       const historyRes = await fetch('/api/history', {
@@ -112,41 +150,49 @@ export default function Home(): JSX.Element {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: updated })
+        body: JSON.stringify({ messages: updated }),
       })
- 
-      if (!res.ok) {
+
+      if (!res.ok || !res.body) {
         const errorText = await res.text()
         throw new Error(`API error: ${errorText}`)
       }
- 
-      const rawText = await res.text()
-      let data: { reply: string; tracks: string[] }
-      try {
-        data = JSON.parse(rawText)
-        if (!data.reply) {
-          throw new Error('No reply field in response')
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let result = ''
+
+      const streamId = uuidv4()
+      setMessages(prev => [...prev, {
+        id: streamId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toISOString()
+      }])
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n').filter(line => line.startsWith('data: '))
+        for (const line of lines) {
+          const json = line.replace(/^data: /, '')
+          try {
+            const parsed = JSON.parse(json)
+            const text = parsed.choices?.[0]?.delta?.content
+            if (text) {
+              result += text
+              setMessages(prev => prev.map(msg =>
+                msg.id === streamId ? { ...msg, content: result } : msg
+              ))
+            }
+          } catch (err) {
+            console.error('Failed to parse stream chunk:', err)
+          }
         }
-        setMessages(prev => [...prev, {
-          id: uuidv4(),
-          role: 'assistant',
-          content: data.reply,
-          timestamp: new Date().toISOString()
-        }])
-
-        const placeholderId = uuidv4()
-        const randomPhrase = annotationLoadingPhrases[Math.floor(Math.random() * annotationLoadingPhrases.length)]
-        setMessages(prev => [...prev, {
-          id: placeholderId,
-          role: 'assistant',
-          content: randomPhrase,
-          timestamp: new Date().toISOString()
-        }])
-
-        fetchHistory(input, data.tracks, placeholderId)
-      } catch (err) {
-        throw new Error('Failed to parse JSON: ' + err)
       }
+
+      fetchPlaylist(input)
     } catch (err) {
       console.error('Error sending message:', err)
       const errorMessage = err instanceof Error ? err.message : 'Something went wrong'
