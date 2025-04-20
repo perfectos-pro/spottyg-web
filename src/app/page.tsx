@@ -121,7 +121,7 @@ export default function Home(): JSX.Element {
       }
  
       const rawText = await res.text()
-      let data
+      let data: { reply: string; tracks: string[] }
       try {
         data = JSON.parse(rawText)
         if (!data.reply) {
