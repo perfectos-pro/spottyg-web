@@ -7,7 +7,9 @@ export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt } = await req.json()
+    let prompt = ''
+    const body = await req.json()
+    prompt = body.prompt
     console.log('Received prompt in /api/playlist/build:', prompt)
     if (!prompt) {
       return new Response(JSON.stringify({ error: 'Missing prompt' }), { status: 400 })
@@ -34,9 +36,9 @@ export async function POST(req: NextRequest) {
     })
   } catch (err) {
     console.error('Error in /api/playlist/build:', err)
-    return new Response(JSON.stringify({ error: `Failed to build playlist for prompt: ${prompt || 'unknown'}` }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(
+      JSON.stringify({ error: `Failed to build playlist${prompt ? ` for prompt: ${prompt}` : ''}` }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
   }
 }
