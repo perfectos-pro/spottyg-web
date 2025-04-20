@@ -42,6 +42,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const tokenData = await tokenResponse.json()
+    console.debug("Spotify token response:", tokenData)
     const { access_token, refresh_token, expires_in } = tokenData
 
     // Get user profile from Spotify

@@ -1,8 +1,8 @@
 export const getSpotifyAccessToken = async (): Promise<string> => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/token`)
-    const data = await res.json()
-    if (!data.token) throw new Error('No Spotify access token provided')
-    return data.token
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/token`)
+  const data = await res.json()
+  if (!data.token) throw new Error('No Spotify access token provided')
+  return data.token
 }
 
 export async function searchSpotifyTracks(query: string, accessToken: string): Promise<any> {
@@ -54,20 +54,27 @@ export async function createPlaylist(name: string, accessToken: string): Promise
   if (!name) throw new Error('Missing playlist name')
   if (!accessToken) throw new Error('Missing access token')
 
-  // Fetch the user's Spotify profile to get their ID
+  // Step 1: Fetch user profile
   const profileRes = await fetch('https://api.spotify.com/v1/me', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
   })
 
+  const profileDebug = await profileRes.text()
+  console.log('[createPlaylist] Profile fetch status:', profileRes.status)
+  console.log('[createPlaylist] Profile body:', profileDebug)
+
   if (!profileRes.ok) {
-    throw new Error('Failed to fetch user profile')
+    const err = new Error('Failed to fetch user profile')
+    Object.assign(err, { details: profileDebug })
+    throw err
   }
 
-  const profile = await profileRes.json()
+  const profile = JSON.parse(profileDebug)
   const spotifyId = profile.id
 
+  // Step 2: Create the playlist
   const createRes = await fetch(`https://api.spotify.com/v1/users/${spotifyId}/playlists`, {
     method: 'POST',
     headers: {
@@ -81,14 +88,17 @@ export async function createPlaylist(name: string, accessToken: string): Promise
     }),
   })
 
-  const createData = await createRes.json()
+  const createDebug = await createRes.text()
+  console.log('[createPlaylist] Playlist creation status:', createRes.status)
+  console.log('[createPlaylist] Playlist creation response:', createDebug)
 
   if (!createRes.ok) {
     const err = new Error('Failed to create playlist')
-    Object.assign(err, { details: createData })
+    Object.assign(err, { details: createDebug })
     throw err
   }
 
+  const createData = JSON.parse(createDebug)
   return {
     id: createData.id,
     name: createData.name,
