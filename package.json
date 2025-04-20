@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "logs": "vercel logs spottyg-web.vercel.app --prod --since=1h --follow"
+    "logs": "vercel logs spottyg-web.vercel.app"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",

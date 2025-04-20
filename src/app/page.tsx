@@ -80,8 +80,23 @@ export default function Home(): JSX.Element {
         body: JSON.stringify({ messages: updated })
       })
 
-      const data = await res.json()
-      setMessages([...updated, { id: uuidv4(), role: 'assistant', content: data.reply, timestamp: new Date().toISOString() }])
+      let data
+      try {
+        data = await res.json()
+        if (!data.reply) {
+          throw new Error('No reply field in response')
+        }
+        setMessages([...updated, { id: uuidv4(), role: 'assistant', content: data.reply, timestamp: new Date().toISOString() }])
+      } catch (err) {
+        console.error('Invalid response from /api/chat:', err)
+        const errorMessage = err instanceof Error ? err.message : 'Something went wrong'
+        setMessages(prev => [...prev, {
+          id: uuidv4(),
+          role: 'assistant',
+          content: `Error: ${errorMessage}`,
+          timestamp: new Date().toISOString()
+        }])
+      }
     } catch (err) {
       console.error('Error sending message:', err)
       const errorMessage = err instanceof Error ? err.message : 'Something went wrong'
