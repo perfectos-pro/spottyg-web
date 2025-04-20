@@ -79,23 +79,19 @@ export default function Home(): JSX.Element {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: updated })
       })
+      console.debug('Raw /api/chat response:', res)
+      const rawText = await res.clone().text()
+      console.debug('Raw text before .json():', rawText)
 
       let data
       try {
-        data = await res.json()
+        data = JSON.parse(rawText)
         if (!data.reply) {
           throw new Error('No reply field in response')
         }
         setMessages([...updated, { id: uuidv4(), role: 'assistant', content: data.reply, timestamp: new Date().toISOString() }])
       } catch (err) {
-        console.error('Invalid response from /api/chat:', err)
-        const errorMessage = err instanceof Error ? err.message : 'Something went wrong'
-        setMessages(prev => [...prev, {
-          id: uuidv4(),
-          role: 'assistant',
-          content: `Error: ${errorMessage}`,
-          timestamp: new Date().toISOString()
-        }])
+        throw new Error('Failed to parse JSON: ' + err)
       }
     } catch (err) {
       console.error('Error sending message:', err)
