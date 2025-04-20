@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables */
+:root {
+  --background: #121212;
+  --foreground: #e0e0e0;
+  --accent: #e84393;
+  --accent-hover: #ff69b4;
+  --font-sans: 'Geist', 'Inter', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Menlo', monospace;
+}
+
+/* Base Reset */
+html {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  margin: 0;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Main Container */
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Chat Message Styling */
+.timestamp {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 0.25rem;
+  margin-left: 0.25rem;
+  text-align: right;
+}
+
+.chat-bubble-user {
+  font-weight: 600;
+  background-color: #232326;
+  color: #f3f3f3;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  margin-bottom: 0.75rem;
+  align-self: flex-end;
+  max-width: 85%;
+}
+
+.chat-bubble-assistant {
+  background-color: #121212;
+  color: #e4e4e7;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  margin-bottom: 0.75rem;
+  align-self: flex-start;
+  max-width: 85%;
+}
+
+/* Scrollable Chat Container */
+.chat-scroll {
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  max-height: calc(100vh - 16rem);
+  padding-bottom: 2rem;
+}
+
+/* Input and Button Styles */
+input[type="text"] {
+  background-color: #18181b;
+  color: white;
+  border: 1px solid #3f3f46;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+input[type="text"]:focus {
+  border-color: var(--accent);
+}
+
+button {
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+button:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Link Styling */
+a {
+  font-weight: 500;
+  text-decoration: underline;
+  color: var(--accent);
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
