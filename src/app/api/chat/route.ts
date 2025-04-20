@@ -26,163 +26,45 @@ export async function POST(req: NextRequest): Promise<Response> {
       body: JSON.stringify({
         model: 'gpt-4-1106-preview',
         messages,
+        stream: true,
       }),
     })
-    let result
-    try {
-      result = await completion.json()
-    } catch (err) {
-      const fallback = await completion.text()
-      console.error('Failed to parse OpenAI response as JSON:', fallback)
-      return new Response(JSON.stringify({ error: 'OpenAI response was not valid JSON' }), {
+
+    if (!completion.ok || !completion.body) {
+      const errorText = await completion.text()
+      console.error('OpenAI stream error:', errorText)
+      return new Response(JSON.stringify({ error: 'Failed to stream OpenAI response' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
-    const assistantMessage = result.choices?.[0]?.message?.content || 'Sorry, I didn’t understand that.'
+    const stream = new ReadableStream({
+      async start(controller) {
+        const decoder = new TextDecoder()
+        const reader = completion.body!.getReader()
 
-    const userPrompt = messages?.find((m: { role: string; content: string }) => m.role === 'user')?.content || ''
-
-    const functionCallRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-1106-preview',
-        messages,
-        functions: [
-          {
-            name: 'createPlaylist',
-            description: 'Extract playlist creation details',
-            parameters: {
-              type: 'object',
-              properties: {
-                playlist_name: { type: 'string', description: 'Name of the playlist' },
-                theme: { type: 'string', description: 'Musical or conceptual theme' },
-                track_list: {
-                  type: 'array',
-                  items: { type: 'string' },
-                  description: 'List of desired tracks in the format "Track Name - Artist Name"',
-                },
-              },
-              required: ['theme'],
-            },
-          },
-        ],
-        function_call: { name: 'createPlaylist' },
-      }),
-    })
-
-    let functionCallJson
-    try {
-      functionCallJson = await functionCallRes.json()
-    } catch (err) {
-      const fallback = await functionCallRes.text()
-      console.error('Failed to parse function call response as JSON:', fallback)
-      return new Response(JSON.stringify({ error: 'Function call response was not valid JSON' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    let playlist_name = '', theme = '', track_list = []
-    try {
-      const parsed = functionCallJson.choices?.[0]?.message?.function_call?.arguments
-      if (parsed) {
-        const parsedObj = JSON.parse(parsed)
-        playlist_name = parsedObj.playlist_name || ''
-        theme = parsedObj.theme || ''
-        track_list = parsedObj.track_list || []
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            controller.enqueue(value)
+          }
+        } catch (err) {
+          console.error('Error during OpenAI stream forwarding:', err)
+          controller.error(err)
+        } finally {
+          controller.close()
+        }
       }
-    } catch (err) {
-      console.error('Failed to parse function call arguments:', err)
-    }
-    const playlistName = playlist_name || 'SpottyG Playlist';
+    })
 
-    // Use OpenAI to generate track list ideas
-    const gptTrackRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
+    return new Response(stream, {
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
       },
-      body: JSON.stringify({
-        model: 'gpt-4-1106-preview',
-        messages: [
-          { role: 'system', content: 'You are a music historian and expert playlist curator.' },
-          { role: 'user', content: `Generate a list of 10 Spotify-searchable tracks based on the following theme: ${userPrompt}. Format as "Track Name - Artist Name"` },
-        ],
-      }),
-    })
-
-    const gptTrackJson = await gptTrackRes.json()
-    const trackLines = gptTrackJson.choices?.[0]?.message?.content?.split('\n') || []
-    const parsedTracks = trackLines
-      .map((line: string) => {
-        const match = line.match(/^\d*\.?\s*"?(.*?)"?\s+-\s+(.*)/)
-        if (match) return `${match[1].trim()} ${match[2].trim()}`
-        return null
-      })
-      .filter(Boolean)
-
-    console.debug('Parsed tracks from OpenAI:', parsedTracks)
-
-    // Search Spotify for track URIs
-    const uris: string[] = []
-    for (const query of parsedTracks.slice(0, 10)) {
-      try {
-        const data = await searchSpotifyTracks(query, accessToken)
-        const track = data.tracks?.items?.[0]
-        if (track) uris.push(track.uri)
-      } catch (err) {
-        console.error(`Track search failed for: ${query}`, err)
-      }
-    }
-
-    console.debug('Spotify URIs:', uris)
-
-    const createJson = await createSpotifyPlaylist(playlistName, accessToken)
-    console.debug('Playlist created:', createJson)
-
-    // Step 2: Add tracks to the playlist
-    const addJson = await addTracksToPlaylist(createJson.id, uris, accessToken)
-    console.debug('Tracks added:', addJson)
-
-    return new Response(JSON.stringify({
-      reply: `Created playlist: <a href="${createJson.url}" target="_blank" rel="noopener noreferrer">${createJson.name}</a>`,
-      tracks: parsedTracks,
-      playlistId: createJson.id
-    }), {
-      headers: { 'Content-Type': 'application/json' },
-    })
-    
-    // 2. Detect track search
-    const searchMatch = userPrompt.match(/(?:find|search for)\s(.+)/i)
-    if (searchMatch) {
-      const query = searchMatch[1]
-      const searchRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/search?q=${encodeURIComponent(query)}`, {
-        credentials: 'include'
-      })
-      const searchData = await searchRes.json()
-
-      const tracks = searchData.tracks?.items?.slice(0, 3) || []
-      const formattedTracks = tracks.map((t: { name: string; artists: { name: string }[] }) => 
-        `- ${t.name} by ${t.artists?.map((a) => a.name).join(', ')}`
-      ).join('\n')
-
-      return new Response(JSON.stringify({
-        reply: assistantMessage,
-        searchResults: formattedTracks ? `Here are some tracks I found:\n${formattedTracks}` : 'No tracks found.',
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    return new Response(JSON.stringify({ reply: assistantMessage }), {
-      headers: { 'Content-Type': 'application/json' },
     })
   } catch (err) {
     console.error('Error in /api/chat:', err)
