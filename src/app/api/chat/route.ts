@@ -12,19 +12,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Unauthorized – no access token found' }, { status: 401 })
     }
 
-    const completion = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-1106-preview',
-        messages,
-      }),
-    })
+    let result
+    try {
+      result = await completion.json()
+    } catch (err) {
+      const fallback = await completion.text()
+      console.error('Failed to parse OpenAI response as JSON:', fallback)
+      return NextResponse.json({ error: 'OpenAI response was not valid JSON' }, { status: 500 })
+    }
 
-    const result = await completion.json()
     const assistantMessage = result.choices?.[0]?.message?.content || 'Sorry, I didn’t understand that.'
 
     const userPrompt = messages?.find((m: { role: string; content: string }) => m.role === 'user')?.content || ''
@@ -61,9 +57,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }),
     })
 
-    const functionCallJson = await functionCallRes.json()
-    const parsed = functionCallJson.choices?.[0]?.message?.function_call?.arguments
-    const { playlist_name, theme, track_list } = parsed ? JSON.parse(parsed) : {}
+    let functionCallJson
+    try {
+      functionCallJson = await functionCallRes.json()
+    } catch (err) {
+      const fallback = await functionCallRes.text()
+      console.error('Failed to parse function call response as JSON:', fallback)
+      return NextResponse.json({ error: 'Function call response was not valid JSON' }, { status: 500 })
+    }
+
+    let playlist_name = '', theme = '', track_list = []
+    try {
+      const parsed = functionCallJson.choices?.[0]?.message?.function_call?.arguments
+      if (parsed) {
+        const parsedObj = JSON.parse(parsed)
+        playlist_name = parsedObj.playlist_name || ''
+        theme = parsedObj.theme || ''
+        track_list = parsedObj.track_list || []
+      }
+    } catch (err) {
+      console.error('Failed to parse function call arguments:', err)
+    }
     const playlistName = playlist_name || 'SpottyG Playlist';
 
     // Use OpenAI to generate track list ideas
