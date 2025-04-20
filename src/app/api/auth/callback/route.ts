@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  // Ensure required environment variables are defined
+  if (!process.env.SPOTIFY_REDIRECT_URI) {
+    throw new Error("Missing SPOTIFY_REDIRECT_URI environment variable");
+  }
+  if (!process.env.NEXT_PUBLIC_BASE_URL) {
+    throw new Error("Missing NEXT_PUBLIC_BASE_URL environment variable");
+  }
   try {
     const code = request.nextUrl.searchParams.get("code")
 
@@ -10,19 +17,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=no_code`)
     }
 
-    console.log("Exchanging code for tokens...")
+    console.debug("Exchanging code for tokens...")
+    const basicAuth = Buffer.from(
+      `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
+    ).toString("base64");
+
     const tokenResponse = await fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": `Basic ${Buffer.from(
-          `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
-        ).toString("base64")}`,
+        "Authorization": `Basic ${basicAuth}`,
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: process.env.SPOTIFY_REDIRECT_URI!,
+        redirect_uri: process.env.SPOTIFY_REDIRECT_URI,
       }),
     })
 
@@ -36,7 +45,7 @@ export async function GET(request: NextRequest) {
     const { access_token, refresh_token, expires_in } = tokenData
 
     // Get user profile from Spotify
-    console.log("Fetching Spotify profile...")
+    console.debug("Fetching Spotify profile...")
     const profileResponse = await fetch("https://api.spotify.com/v1/me", {
       headers: {
         "Authorization": `Bearer ${access_token}`,
@@ -52,7 +61,7 @@ export async function GET(request: NextRequest) {
     const spotifyId = profileData.id
 
     // Create or update user in database
-    console.log("Updating user in database...")
+    console.debug("Updating user in database...")
     await prisma.user.upsert({
       where: { spotifyId },
       create: { spotifyId },
@@ -81,7 +90,7 @@ export async function GET(request: NextRequest) {
       sameSite: "lax",
     })
 
-    console.log("Auth successful, redirecting to homepage")
+    console.debug("Auth successful, redirecting to homepage")
     return response
     
   } catch (error) {

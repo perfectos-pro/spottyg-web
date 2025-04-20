@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { searchSpotifyTracks } from '@/lib/spotify'
 
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest): Promise<NextResponse> {
   const cookieStore = await cookies()
   const accessToken = cookieStore.get('spotify_access_token')?.value
   const { searchParams } = new URL(req.url)
@@ -15,7 +15,10 @@ export async function GET(req: NextRequest) {
   try {
     const data = await searchSpotifyTracks(query, accessToken || '')
     return NextResponse.json(data)
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message, details: err.details || null }, { status: 500 })
+  } catch (err) {
+    if (err instanceof Error) {
+      return NextResponse.json({ error: err.message }, { status: 500 })
+    }
+    return NextResponse.json({ error: 'Unknown error' }, { status: 500 })
   }
 }

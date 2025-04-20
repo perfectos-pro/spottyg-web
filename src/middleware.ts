@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 // This function can be marked `async` if using `await` inside
-export function middleware(request: NextRequest) {
+export function middleware(request: NextRequest): NextResponse {
   // Clone the request headers
   const requestHeaders = new Headers(request.headers)
   
@@ -14,8 +14,8 @@ export function middleware(request: NextRequest) {
   
   // Log cookie presence for debugging
   if (request.nextUrl.pathname.startsWith('/api')) {
-    console.log('Middleware: Processing', request.nextUrl.pathname)
-    console.log('Middleware: Auth cookies present:', 
+    console.debug('Middleware: Processing', request.nextUrl.pathname)
+    console.debug('Middleware: Auth cookies present:', 
       hasSpotifyAuth ? 'yes' : 'no', 
       'Cookies:', request.cookies.getAll().map(c => c.name).join(', ')
     )
@@ -37,4 +37,3 @@ export const config = {
     '/'
   ],
 }
-

@@ -1,10 +1,10 @@
-export const getSpotifyAccessToken = async () => {
+export const getSpotifyAccessToken = async (): Promise<string> => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/token`)
     const data = await res.json()
     return data.token
 }
 
-export async function searchSpotifyTracks(query: string, accessToken: string) {
+export async function searchSpotifyTracks(query: string, accessToken: string): Promise<any> {
   if (!query) throw new Error('Missing search query')
   if (!accessToken) throw new Error('Missing access token')
 
@@ -18,15 +18,14 @@ export async function searchSpotifyTracks(query: string, accessToken: string) {
 
   if (!res.ok) {
     const err = new Error('Spotify API error')
-    // @ts-ignore
-    err.details = data
+    Object.assign(err, { details: data })
     throw err
   }
 
   return data
 }
 
-export async function addTracksToPlaylist(playlistId: string, uris: string[], accessToken: string) {
+export async function addTracksToPlaylist(playlistId: string, uris: string[], accessToken: string): Promise<any> {
   if (!playlistId) throw new Error('Missing playlist ID')
   if (!uris?.length) throw new Error('No tracks to add')
   if (!accessToken) throw new Error('Missing access token')
@@ -43,15 +42,14 @@ export async function addTracksToPlaylist(playlistId: string, uris: string[], ac
   const data = await res.json()
   if (!res.ok) {
     const err = new Error('Failed to add tracks to playlist')
-    // @ts-ignore
-    err.details = data
+    Object.assign(err, { details: data })
     throw err
   }
 
   return data
 }
 
-export async function createSpotifyPlaylist(name: string, accessToken: string) {
+export async function createSpotifyPlaylist(name: string, accessToken: string): Promise<{ id: string; name: string; url: string }> {
   if (!name) throw new Error('Missing playlist name')
   if (!accessToken) throw new Error('Missing access token')
 
@@ -86,8 +84,7 @@ export async function createSpotifyPlaylist(name: string, accessToken: string) {
 
   if (!createRes.ok) {
     const err = new Error('Failed to create playlist')
-    // @ts-ignore
-    err.details = createData
+    Object.assign(err, { details: createData })
     throw err
   }
 

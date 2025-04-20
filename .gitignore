@@ -41,6 +41,8 @@ yarn-error.log*
 # Prisma
 prisma/dev.db
 prisma/.DS_Store
+prisma/node_modules
+.prisma
 
 # vercel
 .vercel

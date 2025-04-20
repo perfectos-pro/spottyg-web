@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
   // Check for required environment variables
   const clientId = process.env.SPOTIFY_CLIENT_ID
   const redirectUri = process.env.SPOTIFY_REDIRECT_URI
 
   if (!clientId || !redirectUri) {
-    console.error('Missing required environment variables: SPOTIFY_CLIENT_ID or SPOTIFY_REDIRECT_URI')
+    console.warn('Missing required environment variables: SPOTIFY_CLIENT_ID or SPOTIFY_REDIRECT_URI')
     return NextResponse.json(
       { error: 'Server configuration error' },
       { status: 500 }
@@ -17,6 +17,8 @@ export async function GET() {
   // Using the redirect URI registered in Spotify dashboard
 
   // Generate a random state parameter to prevent CSRF attacks
+  // The state parameter is used to verify that the response received 
+  // is from the request that was initiated by the user
   const state = crypto.randomBytes(16).toString('hex')
 
   // Include additional scopes
