@@ -97,7 +97,7 @@ export default function Home(): JSX.Element {
         }])
         fetchHistory(prompt, data.tracks, placeholderId)
       } else {
-        throw new Error(data.error || 'Playlist creation failed')
+        throw new Error(`Playlist creation failed: ${data.error || 'Unknown error'}`)
       }
     } catch (err) {
       console.error('Playlist fetch failed:', err)
