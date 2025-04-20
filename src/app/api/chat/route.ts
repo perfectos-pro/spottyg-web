@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { searchSpotifyTracks, createSpotifyPlaylist, addTracksToPlaylist } from '@/lib/spotify'
 import { prisma } from '@/lib/db'
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const { messages } = await req.json()
     const cookieStore = await cookies()
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const result = await completion.json()
     const assistantMessage = result.choices?.[0]?.message?.content || 'Sorry, I didn’t understand that.'
 
-    const userPrompt = messages?.find(m => m.role === 'user')?.content || ''
+    const userPrompt = messages?.find((m: { role: string; content: string }) => m.role === 'user')?.content || ''
 
     const functionCallRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       })
       .filter(Boolean)
 
-    console.log('Parsed tracks from OpenAI:', parsedTracks)
+    console.debug('Parsed tracks from OpenAI:', parsedTracks)
 
     // Search Spotify for track URIs
     const uris: string[] = []
@@ -106,14 +106,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log('Spotify URIs:', uris)
+    console.debug('Spotify URIs:', uris)
 
     const createJson = await createSpotifyPlaylist(playlistName, accessToken)
-    console.log('Playlist created:', createJson)
+    console.debug('Playlist created:', createJson)
 
     // Step 2: Add tracks to the playlist
     const addJson = await addTracksToPlaylist(createJson.id, uris, accessToken)
-    console.log('Tracks added:', addJson)
+    console.debug('Tracks added:', addJson)
 
     // Use OpenAI to generate historical context based on the track list
     const trackListForPrompt = parsedTracks.slice(0, 10).join(', ')
@@ -151,7 +151,9 @@ export async function POST(req: NextRequest) {
       const searchData = await searchRes.json()
 
       const tracks = searchData.tracks?.items?.slice(0, 3) || []
-      const formattedTracks = tracks.map((t: any) => `- ${t.name} by ${t.artists?.map((a: any) => a.name).join(', ')}`).join('\n')
+      const formattedTracks = tracks.map((t: { name: string; artists: { name: string }[] }) => 
+        `- ${t.name} by ${t.artists?.map((a) => a.name).join(', ')}`
+      ).join('\n')
 
       return NextResponse.json({
         reply: assistantMessage,
