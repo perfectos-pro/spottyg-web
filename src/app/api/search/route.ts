@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { searchSpotifyTracks } from '@/lib/spotify'
+import { searchSpotifyTracks } from '@/lib'
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const cookieStore = await cookies()

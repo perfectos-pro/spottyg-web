@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(req: Request): Promise<NextResponse> {
   // Check for required environment variables
   const clientId = process.env.SPOTIFY_CLIENT_ID
   const redirectUri = process.env.SPOTIFY_REDIRECT_URI

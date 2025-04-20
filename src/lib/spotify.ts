@@ -25,7 +25,7 @@ export async function searchSpotifyTracks(query: string, accessToken: string): P
   return data
 }
 
-export async function addTracksToPlaylist(playlistId: string, uris: string[], accessToken: string): Promise<any> {
+export async function addTracksToPlaylist(accessToken: string, playlistId: string, uris: string[]): Promise<any> {
   if (!playlistId) throw new Error('Missing playlist ID')
   if (!uris?.length) throw new Error('No tracks to add')
   if (!accessToken) throw new Error('Missing access token')

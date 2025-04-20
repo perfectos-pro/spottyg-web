@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
-import { getAccessTokenFromCookies, getSpotifyProfile } from '@/lib/spotify'
-import { createPlaylist, searchSpotifyTracks, addTracksToPlaylist } from '@/lib/spotify'
+import { getAccessTokenFromCookies, getSpotifyProfile, createPlaylist, searchSpotifyTracks, addTracksToPlaylist } from '@/lib'
 import { getTrackListFromPrompt } from '@/lib/openai'
 
 export const runtime = 'nodejs'
@@ -22,12 +21,13 @@ export async function POST(req: NextRequest) {
     const trackList = await getTrackListFromPrompt(prompt)
 
     const playlistName = `SpottyG Playlist - ${prompt.slice(0, 32)}`
-    const playlist = await createPlaylist(token, user.id, playlistName)
+    const playlist = await createPlaylist(token, playlistName)
 
-    const trackUris = await searchSpotifyTracks(trackList, token)
+    const rawUris = await searchSpotifyTracks(token, trackList.join(', '))
+    const trackUris: string[] = rawUris.split(',').map((uri: string) => uri.trim())
     await addTracksToPlaylist(token, playlist.id, trackUris)
 
-    return new Response(JSON.stringify({ playlistUrl: playlist.external_urls.spotify, tracks: trackList }), {
+    return new Response(JSON.stringify({ playlistUrl: playlist.url, tracks: trackList }), {
       headers: { 'Content-Type': 'application/json' }
     })
   } catch (err) {

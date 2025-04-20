@@ -1,4 +1,4 @@
-import { OpenAI } from '@/lib/openai'
+import { OpenAI } from '@/lib'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest): Promise<NextResponse> {

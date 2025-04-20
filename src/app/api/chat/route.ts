@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { searchSpotifyTracks, createSpotifyPlaylist, addTracksToPlaylist } from '@/lib/spotify'
+import { searchSpotifyTracks, createPlaylist, addTracksToPlaylist } from '@/lib'
 import { prisma } from '@/lib/db'
 
 export const runtime = 'nodejs'

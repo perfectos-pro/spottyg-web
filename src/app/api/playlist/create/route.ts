@@ -1,4 +1,4 @@
-import { createPlaylist } from '@/lib/spotify'
+import { createPlaylist } from '@/lib'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
