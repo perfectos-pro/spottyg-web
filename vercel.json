@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/playlist/build.ts": {
+      "runtime": "nodejs"
+    }
+  }
+}
