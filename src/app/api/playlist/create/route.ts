@@ -1,4 +1,4 @@
-import { createSpotifyPlaylist } from '@/lib/spotify'
+import { createPlaylist } from '@/lib/spotify'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -8,7 +8,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const accessToken = cookieStore.get('spotify_access_token')?.value
     const { name } = await req.json()
 
-    const playlist = await createSpotifyPlaylist(name, accessToken || '')
+    const playlist = await createPlaylist(name, accessToken || '')
     return NextResponse.json(playlist)
   } catch (error) {
     if (error instanceof Error) {
