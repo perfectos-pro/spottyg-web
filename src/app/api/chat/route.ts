@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { searchSpotifyTracks, createSpotifyPlaylist, addTracksToPlaylist } from '@/lib/spotify'
 import { prisma } from '@/lib/db'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest): Promise<Response> {
   try {
