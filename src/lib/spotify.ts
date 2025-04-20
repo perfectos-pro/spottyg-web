@@ -94,3 +94,29 @@ export async function createSpotifyPlaylist(name: string, accessToken: string): 
     url: createData.external_urls?.spotify,
   }
 }
+
+export async function getSpotifyProfile(accessToken: string): Promise<{ id: string }> {
+  const profileRes = await fetch('https://api.spotify.com/v1/me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (!profileRes.ok) {
+    throw new Error('Failed to fetch Spotify user profile')
+  }
+
+  const profile = await profileRes.json()
+  return { id: profile.id }
+}
+
+export async function getAccessTokenFromCookies(): Promise<string | null> {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/token`)
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.token || null
+}
+
+export { 
+  getAccessTokenFromCookies,
+  getSpotifyProfile,
+  createSpotifyPlaylist as createPlaylist 
+}
