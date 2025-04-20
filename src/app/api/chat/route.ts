@@ -3,13 +3,18 @@ import { cookies } from 'next/headers'
 import { searchSpotifyTracks, createSpotifyPlaylist, addTracksToPlaylist } from '@/lib/spotify'
 import { prisma } from '@/lib/db'
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export const runtime = 'edge'
+
+export async function POST(req: NextRequest): Promise<Response> {
   try {
     const { messages } = await req.json()
     const cookieStore = await cookies()
     const accessToken = cookieStore.get('spotify_access_token')?.value
     if (!accessToken) {
-      return NextResponse.json({ error: 'Unauthorized – no access token found' }, { status: 401 })
+      return new Response(JSON.stringify({ error: 'Unauthorized – no access token found' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
     const completion = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -29,7 +34,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     } catch (err) {
       const fallback = await completion.text()
       console.error('Failed to parse OpenAI response as JSON:', fallback)
-      return NextResponse.json({ error: 'OpenAI response was not valid JSON' }, { status: 500 })
+      return new Response(JSON.stringify({ error: 'OpenAI response was not valid JSON' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
     const assistantMessage = result.choices?.[0]?.message?.content || 'Sorry, I didn’t understand that.'
@@ -74,7 +82,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     } catch (err) {
       const fallback = await functionCallRes.text()
       console.error('Failed to parse function call response as JSON:', fallback)
-      return NextResponse.json({ error: 'Function call response was not valid JSON' }, { status: 500 })
+      return new Response(JSON.stringify({ error: 'Function call response was not valid JSON' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
     let playlist_name = '', theme = '', track_list = []
@@ -162,8 +173,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const historyJson = await historyRes.json()
     const historyText = historyJson.choices?.[0]?.message?.content || ''
 
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       reply: `Created playlist: <a href="${createJson.url}" target="_blank" rel="noopener noreferrer">${createJson.name}</a><br><br>${historyText.replace(/\n/g, '<br>')}`,
+    }), {
+      headers: { 'Content-Type': 'application/json' },
     });
     
     // 2. Detect track search
@@ -180,15 +193,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         `- ${t.name} by ${t.artists?.map((a) => a.name).join(', ')}`
       ).join('\n')
 
-      return NextResponse.json({
+      return new Response(JSON.stringify({
         reply: assistantMessage,
         searchResults: formattedTracks ? `Here are some tracks I found:\n${formattedTracks}` : 'No tracks found.',
+      }), {
+        headers: { 'Content-Type': 'application/json' },
       })
     }
 
-    return NextResponse.json({ reply: assistantMessage })
+    return new Response(JSON.stringify({ reply: assistantMessage }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
   } catch (err) {
     console.error('Error in /api/chat:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 }
