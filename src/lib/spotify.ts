@@ -114,9 +114,3 @@ export async function getAccessTokenFromCookies(): Promise<string | null> {
   const data = await res.json()
   return data.token || null
 }
-
-export { 
-  getAccessTokenFromCookies,
-  getSpotifyProfile,
-  createSpotifyPlaylist as createPlaylist 
-}
