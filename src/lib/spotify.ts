@@ -49,7 +49,7 @@ export async function addTracksToPlaylist(playlistId: string, uris: string[], ac
   return data
 }
 
-export async function createSpotifyPlaylist(name: string, accessToken: string): Promise<{ id: string; name: string; url: string }> {
+export async function createPlaylist(name: string, accessToken: string): Promise<{ id: string; name: string; url: string }> {
   if (!name) throw new Error('Missing playlist name')
   if (!accessToken) throw new Error('Missing access token')
 
