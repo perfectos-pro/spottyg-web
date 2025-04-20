@@ -16,6 +16,13 @@ export default function Home(): JSX.Element {
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const annotationLoadingPhrases = [
+    'Combing the archives...',
+    'Dusting off the record sleeves...',
+    'Consulting the liner notes...',
+    'Tuning into forgotten frequencies...',
+    'Rewinding through history...'
+  ]
 
   // Check for client-side cookie directly
   useEffect(() => {
@@ -90,6 +97,46 @@ export default function Home(): JSX.Element {
           throw new Error('No reply field in response')
         }
         setMessages([...updated, { id: uuidv4(), role: 'assistant', content: data.reply, timestamp: new Date().toISOString() }])
+        const placeholderId = uuidv4()
+        const randomPhrase = annotationLoadingPhrases[Math.floor(Math.random() * annotationLoadingPhrases.length)]
+        setMessages(prev => [...prev, {
+          id: placeholderId,
+          role: 'assistant',
+          content: randomPhrase,
+          timestamp: new Date().toISOString(),
+        }])
+
+        // Step 2: Fetch historical annotation
+        if (data.tracks && data.tracks.length && data.reply) {
+          try {
+            const historyRes = await fetch('/api/history', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                playlistName: input,
+                tracks: data.tracks,
+              }),
+            })
+
+            const historyData = await historyRes.json()
+            if (historyData.history) {
+              setMessages(prev => [...prev, {
+                id: uuidv4(),
+                role: 'assistant',
+              content: DOMPurify.sanitize(historyData.history),
+                timestamp: new Date().toISOString(),
+              }])
+            }
+            } catch (err) {
+              console.error('Error fetching history:', err)
+              setMessages(prev => [...prev, {
+                id: uuidv4(),
+                role: 'assistant',
+                content: 'Unable to retrieve annotation at this time. Please try again later.',
+                timestamp: new Date().toISOString(),
+              }])
+            }
+        }
       } catch (err) {
         throw new Error('Failed to parse JSON: ' + err)
       }
@@ -157,14 +204,17 @@ export default function Home(): JSX.Element {
         <>
           <div className="flex-1 overflow-y-auto chat-scroll px-1 pb-4 space-y-4">
             {messages.map((msg, i) => {
+              const isLoadingAnnotation = annotationLoadingPhrases.includes(msg.content)
               const bubbleClass = msg.role === 'user'
                 ? 'bg-pink-500 text-white rounded-br-none'
-                : 'bg-zinc-800 text-white rounded-bl-none'
+                : isLoadingAnnotation
+                  ? 'bg-zinc-800 text-zinc-300 italic rounded-bl-none'
+                  : 'bg-zinc-800 text-white rounded-bl-none'
               return (
                 <div key={msg.id} className={`mb-2 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
                     className={`max-w-[85%] px-4 py-3 rounded-xl text-sm ${bubbleClass}`}
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.content) }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(isLoadingAnnotation ? `🤔 ${msg.content}` : msg.content) }}
                   />
                   {msg.timestamp && (
                     <div className="text-xs text-zinc-400 mt-1 ml-2">

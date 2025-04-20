@@ -151,33 +151,13 @@ export async function POST(req: NextRequest): Promise<Response> {
     const addJson = await addTracksToPlaylist(createJson.id, uris, accessToken)
     console.debug('Tracks added:', addJson)
 
-    // Use OpenAI to generate historical context based on the track list
-    const trackListForPrompt = parsedTracks.slice(0, 10).join(', ')
-    const historyRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-1106-preview',
-        messages: [
-          { role: 'system', content: 'You are a music historian and playlist curator.' },
-          {
-            role: 'user',
-            content: `Provide a 2-3 paragraph annotation with historical and cultural context for a playlist titled "${playlistName}". The playlist includes the following tracks: ${trackListForPrompt}`,
-          },
-        ],
-      }),
-    })
-    const historyJson = await historyRes.json()
-    const historyText = historyJson.choices?.[0]?.message?.content || ''
-
     return new Response(JSON.stringify({
-      reply: `Created playlist: <a href="${createJson.url}" target="_blank" rel="noopener noreferrer">${createJson.name}</a><br><br>${historyText.replace(/\n/g, '<br>')}`,
+      reply: `Created playlist: <a href="${createJson.url}" target="_blank" rel="noopener noreferrer">${createJson.name}</a>`,
+      tracks: parsedTracks,
+      playlistId: createJson.id
     }), {
       headers: { 'Content-Type': 'application/json' },
-    });
+    })
     
     // 2. Detect track search
     const searchMatch = userPrompt.match(/(?:find|search for)\s(.+)/i)
